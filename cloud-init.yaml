@@ -10,21 +10,20 @@ write_files:
          ].
   - path: /root/find_hosts.sh
     content: |
-        #!/usr/bin/env bash
+        #!/bin/sh
 
         export AWS_DEFAULT_REGION='${region}'
 
-        DNSES=$(aws ec2 describe-instances --filters "Name=tag:aws:autoscaling:groupName,Values=${asg_name}" "Name=instance-state-name,Values=running" | jq ".Reservations[].Instances[].PrivateDnsName" | xargs)
+        DNSES="$(aws ec2 describe-instances --filters "Name=tag:aws:autoscaling:groupName,Values=${asg_name}" "Name=instance-state-name,Values=running" | jq ".Reservations[].Instances[].PrivateDnsName" | xargs)"
 
-        HOSTNAMES=()
-        for dns in $DNSES; do
-            hostname=($${dns//./ })
-            if [ "$hostname" != "$HOSTNAME" ]; then
-              HOSTNAMES+=( $hostname )
+        set --
+        for hostname in $DNSES; do
+            if [ "$${hostname%%.*}" != "$${HOSTNAME}" ]; then
+              set -- "$${@}" "$${hostname}"
             fi
         done
 
-        echo $HOSTNAMES
+        echo "$${@}"
   - path: /root/bin/join_cluster.sh
     content: |
         #!/usr/bin/env sh
